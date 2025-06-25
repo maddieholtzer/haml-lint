@@ -12,7 +12,7 @@ module HamlLint
     def parse(args)
       @options = default_options
 
-      OptionParser.new do |parser|
+      remaining_args = OptionParser.new do |parser|
         parser.banner = "Usage: #{APP_NAME} [options] [file1, file2, ...]"
 
         add_linter_options parser
@@ -20,10 +20,10 @@ module HamlLint
         add_file_options parser
         add_logger_options parser
         add_info_options parser
-      end.parse!(args)
+      end.parse(args)
 
       # Any remaining arguments are assumed to be files
-      @options[:files] = args.empty? ? ['.'] : args
+      @options[:files] = remaining_args.empty? ? ['.'] : remaining_args
 
       @options
     rescue OptionParser::InvalidOption => e

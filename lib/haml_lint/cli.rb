@@ -4,6 +4,7 @@ require_relative '../haml_lint'
 require_relative 'options'
 
 require 'sysexits'
+require 'pry'
 
 module HamlLint
   # Command line application interface.
@@ -21,8 +22,7 @@ module HamlLint
     # @param args [Array<String>] command line arguments
     # @return [Integer] exit status code
     def run(args)
-      options = HamlLint::Options.new.parse(args)
-      act_on_options(options)
+      act_on_options(args)
     rescue StandardError => e
       handle_exception(e)
     end
@@ -34,7 +34,8 @@ module HamlLint
     # Given the provided options, execute the appropriate command.
     #
     # @return [Integer] exit status code
-    def act_on_options(options) # rubocop:disable Metrics
+    def act_on_options(args) # rubocop:disable Metrics
+      options = HamlLint::Options.new.parse(args)
       configure_logger(options)
       if options[:debug]
         ENV['HAML_LINT_DEBUG'] = 'true'
@@ -55,7 +56,7 @@ module HamlLint
         print_available_reporters
         Sysexits::EX_OK
       else
-        scan_for_lints(options)
+        scan_for_lints(options, args)
       end
     end
 
@@ -98,9 +99,9 @@ module HamlLint
     #   generating reporter
     # @option options [Class] :reporter the class of reporter to use
     # @return [HamlLint::Reporter]
-    def reporter_from_options(options)
+    def reporter_from_options(options, args)
       if options[:auto_gen_config]
-        HamlLint::Reporter::DisabledConfigReporter.new(log, limit: options[:auto_gen_exclude_limit] || 15)
+        HamlLint::Reporter::DisabledConfigReporter.new(log, limit: options[:auto_gen_exclude_limit] || 15, args:)
       else
         options.fetch(:reporter, HamlLint::Reporter::DefaultReporter).new(log)
       end
@@ -109,8 +110,8 @@ module HamlLint
     # Scans the files specified by the given options for lints.
     #
     # @return [Integer] exit status code
-    def scan_for_lints(options)
-      reporter = reporter_from_options(options)
+    def scan_for_lints(options, args)
+      reporter = reporter_from_options(options, args)
       report = Runner.new.run(options.merge(reporter: reporter))
       report.display
       report.failed? ? Sysexits::EX_DATAERR : Sysexits::EX_OK
